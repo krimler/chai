@@ -1,0 +1,55 @@
+# chai_grammar.peg
+
+# --- Basic Tokens ---
+start                   <- _ statement+ EOF
+statement               <- function / assignment / expression / policy / control_flow
+
+# Identifiers and keywords
+identifier              <- !keyword [a-zA-Z_] [a-zA-Z0-9_]*
+keyword                 <- 'def' / 'let' / 'if' / 'then' / 'else' / 'break' / 'continue' / 'while' / 'do' / 'policy' / 'true' / 'false' / 'verify' / 'using'
+
+# Literals
+number                  <- [0-9]+ ('.' [0-9]+)?
+string                  <- '"' (!'"' .)* '"'
+
+# Whitespace and comments
+_                       <- [ \t\n\r]*
+EOF                     <- !.
+
+# Function definition
+definition              <- 'def' _ identifier _ '(' _ ')' _ '{' _ statement* _ '}'
+
+# Assignment
+assignment              <- 'let' _ identifier _ '=' _ expression
+
+# Expressions
+expression              <- pipeline
+pipeline                <- or_expr (_ ('->' / '\|' / 'or' / '&' / '\|\|') _ or_expr)*
+or_expr                <- verify_expr (_ 'or' _ verify_expr)*
+verify_expr            <- base_expr (_ 'verify' _ '(' _ expression _ ')' (_ 'using' _ expression)?)?
+
+# Base expression (agent call, literal, identifier)
+base_expr               <- agent_call / literal / var_ref / grouped_expr
+
+agent_call              <- identifier _ '(' _ (expression (_ ',' _ expression)*)? _ ')'
+var_ref                 <- identifier ('.' ('i' / 'o' / 'ii' / 'io' / 'ti'))?
+literal                 <- string / number
+
+# Grouping
+grouped_expr            <- '(' _ expression _ ')'
+
+# Policy
+policy                  <- 'policy' _ (policy_decl / policy_func)
+policy_decl             <- '(' _ policy_args _ ')'
+policy_args             <- identifier _ ':' _ identifier (_ ',' _ identifier _ ':' _ identifier)*
+policy_func             <- 'def' _ identifier _ '(' _ identifier* _ ')' _ '{' statement* '}'
+
+# Control flow
+control_flow            <- if_expr / while_loop / do_while_loop / break_stmt / continue_stmt
+if_expr                 <- 'if' _ expression _ 'then' _ expression (_ 'else' _ expression)?
+break_stmt              <- 'break' _ ('if' _ expression)?
+continue_stmt           <- 'continue' _ ('if' _ expression)?
+while_loop              <- 'while' _ expression _ expression
+#do_while_loop          <- 'do' _ expression _ 'while' _ expression
+
+# Optional: Extendable later
